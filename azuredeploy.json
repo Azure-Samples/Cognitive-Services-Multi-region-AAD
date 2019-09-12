@@ -1,0 +1,93 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "accountName": {
+            "metadata": {
+                "description": "Display name of Computer Vision API account"
+            },
+            "type": "string"
+        },
+        "servicePrincipalId": {
+            "metadata": {
+                "description": "Service principal id of the client application"
+            },
+            "type": "string"
+        },
+        "cognitiveServicesLocation": {
+            "metadata": {
+                "description": "The location for the Computer Vision API"
+            },
+            "type": "string",
+            "minLength": 1,
+            "allowedValues": [
+                "westeurope",
+                "eastus2",
+                "southeastasia",
+                "centralus",
+                "westus"
+            ],
+            "defaultValue": "westeurope"
+        }
+    },
+    "variables": {
+        "cognitiveservicesid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', parameters('accountName'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.CognitiveServices/accounts",
+            "sku": {
+                "name": "S1"
+            },
+            "kind": "ComputerVision",
+            "name": "[parameters('accountName')]",
+            "apiVersion": "2016-02-01-preview",
+            "location": "westus",
+            "properties": {
+                "customSubDomainName": "[parameters('accountName')]"
+            },
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "name": "8446a13c-6886-46e2-a17f-9df73adb334e",
+            "apiVersion": "2017-10-01-preview",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "roleDefinitionId": "[concat(subscription().Id, '/providers/Microsoft.Authorization/roleDefinitions/a97b65f3-24c7-4388-baec-2e87135dc908')]",
+                "principalId": "[parameters('servicePrincipalId')]",
+                "scope": "[resourceGroup().Id]"
+            }
+        },
+        {
+            "type": "Microsoft.CognitiveServices/accounts",
+            "sku": {
+                "name": "[parameters('SKU')]"
+            },
+            "kind": "ComputerVision",
+            "name": "[parameters('accountName')]",
+            "apiVersion": "2016-02-01-preview",
+            "location": "westeurope",
+            "properties": {},
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.CognitiveServices/accounts",
+            "sku": {
+                "name": "[parameters('SKU')]"
+            },
+            "kind": "ComputerVision",
+            "name": "[parameters('accountName')]",
+            "apiVersion": "2016-02-01-preview",
+            "location": "southeastasia",
+            "properties": {},
+            "dependsOn": []
+        }
+    ],
+    "outputs": {
+        "endpoint": {
+            "type": "string",
+            "value": "[reference(variables('cognitiveservicesid'),'2016-02-01-preview').endpoint]"
+        }
+    }
+}
