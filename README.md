@@ -1,14 +1,17 @@
 ---
 page_type: sample
 languages:
-- csharp
+- json
 products:
-- dotnet
-description: "Add 150 character max description"
-urlFragment: "update-this-to-unique-url-stub"
+- azure
+- azure-cognitive-services
+name: "Multi-regional Cognitive Services endpoint using Traffic Manager and AAD authentication"
+azureDeploy: "https://raw.githubusercontent.com/Azure-Samples/Cognitive-Services-Multi-region-AAD/master/azuredeploy.json"
+description: "Create a single multi-region Cognitive Services endpoint using Traffic Manager and AAD authentication"
+urlFragment: "cognitive-services-multi-region-aad"
 ---
 
-# Official Microsoft Sample
+# Multi-regional Cognitive Services endpoint using Traffic Manager and AAD authentication
 
 <!-- 
 Guidelines on README format: https://review.docs.microsoft.com/help/onboard/admin/samples/concepts/readme-template?branch=master
@@ -18,36 +21,41 @@ Guidance on onboarding samples to docs.microsoft.com/samples: https://review.doc
 Taxonomies for products and languages: https://review.docs.microsoft.com/new-hope/information-architecture/metadata/taxonomies?branch=master
 -->
 
-Give a short description for your sample here. What does it do and why is it important?
+Learn to create a single endpoint for multiple Cognitive Services resources using Traffic Manager, Azure Active Directory, and Application Gateway.
 
-## Contents
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure-Samples%2FCognitive-Services-Multi-region-AAD%2Fmaster%2Fazuredeploy.json)
 
-Outline the file contents of the repository. It helps users navigate the codebase, build configuration and any related assets.
+## Introduction
 
-| File/folder       | Description                                |
-|-------------------|--------------------------------------------|
-| `src`             | Sample source code.                        |
-| `.gitignore`      | Define what to ignore at commit time.      |
-| `CHANGELOG.md`    | List of changes to the sample.             |
-| `CONTRIBUTING.md` | Guidelines for contributing to the sample. |
-| `README.md`       | This README file.                          |
-| `LICENSE`         | The license for the sample.                |
+Each Cognitive Services resource is a regional endpoint traditionally accessed using a key that's unique to each resource. When creating a global application with a regional-agnostic client, this can be problematic since developers have to create middle tier services to store the keys and/or route traffic accordingly.
+
+This sample proposes a solution by using Traffic Manager, AAD authentication, and Application Gateway to intelligently route traffic based on geography while allowing a single token to be used against two Computer Vision endpoints located in West US and West Europe. 
 
 ## Prerequisites
 
-Outline the required components and tools that a user might need to have on their machine in order to run the sample. This can be anything from frameworks, SDKs, OS versions or IDE releases.
+To try out the ARM template, simply click "Deploy to Azure" button to deploy to your favorite Subscription using Azure portal. Alternatively, the template can also be downloaded locally and deployed using Azure CLI.
 
-## Setup
+For service principal ID, you will need to go to Azure Active Directory and create an application before hand. Please follow this [instruction](https://docs.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal) and make sure to user service principal Id and not the application object Id.
 
-Explain how to prepare the sample once the user clones or downloads the repository. The section should outline every step necessary to install dependencies and set up any settings (for example, API keys and output folders).
+## Instruction
 
-## Runnning the sample
+For instructions on how to get a Bearer token for the service principal created in prerequisite, please follow this [instruction](https://docs.microsoft.com/en-us/azure/cognitive-services/authentication?tabs=powershell#authenticate-with-azure-active-directory).
 
-Outline step-by-step instructions to execute the sample and see its output. Include steps for executing the sample from the IDE, starting specific services in the Azure portal or anything related to the overall launch of the code.
+Once the ARM template is deployed, you can generate a request against the Traffic Manager endpoint (HTTP only) with the Bearer token representing the service principal.
 
 ## Key concepts
 
-Provide users with more context on the tools and services used in the sample. Explain some of the code that is being used and how services interact with each other.
+<img src="./AADMulti.jpg" alt="Architecture Diagram" width="400"/>
+
+
+
+This ARM template create a total of nine resources as depicted in the diagram above. 
+
+1. The Traffic Manager is configured to be routing based on geography to minimize latency. It can also be configured to be priority-based if what you are looking for is a fall-back mechanism.
+2. The domain name is then resolved against public IP of Application Gateway for either West US or West Europe.
+3. The most important job of the Application Gateway is to transform this request to a request on Cognitive Services endpoint while using the resource custom domain name. Cognitive Services uses the custom domain name to identify the resource so it's important to override the host name to the custom domain of the resource.
+
+NOTE: the Application Gateway transforms a HTTP request to HTTPS. If a HTTPS front-end is desired, you will need to setup a certificate for the Application Gateway frontend. This is recommended but skipped for this sample due to simplification.
 
 ## Contributing
 
