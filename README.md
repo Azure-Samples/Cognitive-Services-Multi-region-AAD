@@ -45,7 +45,7 @@ Once the ARM template is deployed, you can generate a request against the Traffi
 
 ## Key concepts
 
-<img src="./AADMulti.jpg" alt="Architecture Diagram" width="400"/>
+<img src="https://github.com/Azure-Samples/Cognitive-Services-Multi-region-AAD/blob/master/AADMulti.jpg" alt="Architecture Diagram" width="400"/>
 
 
 
