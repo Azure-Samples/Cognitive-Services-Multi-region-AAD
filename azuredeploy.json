@@ -1,162 +1,466 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-    "contentVersion": "1.0.0.0",
-    "parameters": {
-        "accountName": {
-            "metadata": {
-                "description": "Display name of Computer Vision API account, needs to be globally unique."
-            },
-            "type": "string"
-        },
-        "servicePrincipalId": {
-            "metadata": {
-                "description": "Service principal id of the client application"
-            },
-            "type": "string"
-        }
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "accountName": {
+      "metadata": {
+        "description": "Display name of Computer Vision API account, needs to be globally unique."
+      },
+      "type": "string"
     },
-    "variables": {
-        "cognitiveservicesid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', parameters('accountName'),'westus')]",
-        "cognitiveservicesid2": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', parameters('accountName'),'westeurope')]"
+    "servicePrincipalId": {
+      "metadata": {
+        "description": "Service principal id of the client application"
+      },
+      "type": "string"
     },
-    "resources": [
-        {
-            "type": "Microsoft.Authorization/roleAssignments",
-            "name": "8446a13c-6886-46e2-a17f-9df73adb334e",
-            "apiVersion": "2018-01-01-preview",
-            "location": "[resourceGroup().location]",
-            "properties": {
-                "roleDefinitionId": "[concat(subscription().Id, '/providers/Microsoft.Authorization/roleDefinitions/a97b65f3-24c7-4388-baec-2e87135dc908')]",
-                "principalId": "[parameters('servicePrincipalId')]",
-                "scope": "[resourceGroup().Id]"
+    "roleAssignmentName": {
+      "type": "string",
+      "defaultValue": "[newGuid()]"
+    }
+  },
+  "variables": {
+    "cognitiveservicesid": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', parameters('accountName'),'westus')]",
+    "cognitiveservicesid2": "[concat(resourceGroup().id,'/providers/','Microsoft.CognitiveServices/accounts/', parameters('accountName'),'westeurope')]",
+    "appgatewaynamewestus": "[concat(parameters('accountName'),'westusappgwy')]",
+    "appgatewaynamewesteu": "[concat(parameters('accountName'),'westeuappgwy')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "[parameters('roleAssignmentName')]",
+      "apiVersion": "2018-01-01-preview",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "roleDefinitionId": "[concat(subscription().Id, '/providers/Microsoft.Authorization/roleDefinitions/a97b65f3-24c7-4388-baec-2e87135dc908')]",
+        "principalId": "[parameters('servicePrincipalId')]",
+        "scope": "[resourceGroup().Id]"
+      },
+      "dependsOn": [
+        "[concat(resourceGroup().id,'/providers/','Microsoft.Network/applicationGateways/', variables('appgatewaynamewestus'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "sku": {
+        "name": "S1"
+      },
+      "kind": "ComputerVision",
+      "name": "[concat(parameters('accountName'),'westus')]",
+      "apiVersion": "2016-02-01-preview",
+      "location": "westus",
+      "properties": {
+        "customSubDomainName": "[concat(parameters('accountName'),'westus')]"
+      },
+      "dependsOn": []
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "sku": {
+        "name": "S1"
+      },
+      "kind": "ComputerVision",
+      "name": "[concat(parameters('accountName'),'westeurope')]",
+      "apiVersion": "2016-02-01-preview",
+      "location": "westeurope",
+      "properties": {
+        "customSubDomainName": "[concat(parameters('accountName'),'westeurope')]"
+      },
+      "dependsOn": []
+    },
+    {
+      "apiVersion": "2018-04-01",
+      "type": "Microsoft.Network/trafficManagerProfiles",
+      "name": "[parameters('accountName')]",
+      "location": "global",
+      "properties": {
+        "profileStatus": "Enabled",
+        "trafficRoutingMethod": "Geographic",
+        "dnsConfig": {
+          "relativeName": "[parameters('accountName')]",
+          "ttl": 30
+        },
+        "monitorConfig": {
+          "protocol": "HTTP",
+          "port": 80,
+          "path": "/status-0123456789abcdef",
+          "expectedStatusCodeRanges": [
+            {
+              "min": 200,
+              "max": 202
             }
+          ]
         },
-        {
-            "type": "Microsoft.CognitiveServices/accounts",
-            "sku": {
-                "name": "S1"
-            },
-            "kind": "ComputerVision",
-            "name": "[concat(parameters('accountName'),'westus')]",
-            "apiVersion": "2016-02-01-preview",
-            "location": "westus",
+        "endpoints": [
+          {
+            "name": "WestUSEndpoint",
+            "type": "Microsoft.Network/TrafficManagerProfiles/ExternalEndpoints",
             "properties": {
-                "customSubDomainName": "[concat(parameters('accountName'),'westus')]"
-            },
-            "dependsOn": []
-        },
-        {
-            "type": "Microsoft.CognitiveServices/accounts",
-            "sku": {
-                "name": "S1"
-            },
-            "kind": "ComputerVision",
-            "name": "[concat(parameters('accountName'),'westeurope')]",
-            "apiVersion": "2016-02-01-preview",
-            "location": "westeurope",
-            "properties": {
-                "customSubDomainName": "[concat(parameters('accountName'),'westeurope')]"
-            },
-            "dependsOn": []
-        },
-        {
-            "apiVersion": "2018-04-01",
-            "type": "Microsoft.Network/trafficManagerProfiles",
-            "name": "[parameters('accountName')]",
-            "location": "global",
-            "properties": {
-                "profileStatus": "Enabled",
-                "trafficRoutingMethod": "Geographic",
-                "dnsConfig": {
-                    "relativeName": "[parameters('accountName')]",
-                    "ttl": 30
-                },
-                "monitorConfig": {
-                    "protocol": "HTTP",
-                    "port": 80,
-                    "path": "/",
-                    "expectedStatusCodeRanges": [
-                        {
-                            "min": 200,
-                            "max": 202
-                        },
-                        {
-                            "min": 407,
-                            "max": 407
-                        }
-                    ]
-                },
-                "endpoints": [
-                    {
-                        "name": "endpoint1",
-                        "type": "Microsoft.Network/TrafficManagerProfiles/ExternalEndpoints",
-                        "properties": {
-                            "target": "[concat(parameters('accountName'),'westus.cognitiveservices.azure.com')]",
-                            "endpointStatus": "Enabled",
-                            "endpointLocation": "westus",
-                            "geoMapping": [
-                                "GEO-NA"
-                            ]
-                        }
-                    },
-                    {
-                        "name": "endpoint2",
-                        "type": "Microsoft.Network/TrafficManagerProfiles/ExternalEndpoints",
-                        "properties": {
-                            "target": "[concat(parameters('accountName'),'westeurope.cognitiveservices.azure.com')]",
-                            "endpointStatus": "Enabled",
-                            "endpointLocation": "westeurope",
-                            "geoMapping": [
-                                "GEO-EU",
-                                "GEO-AS"
-                            ]
-                        }
-                    }
-                ]
-            },
-            "dependsOn": [
-                "[variables('cognitiveservicesid')]",
-                "[variables('cognitiveservicesid2')]"
-            ]
-        },
-        {
-            "apiVersion": "2015-05-01-preview",
-            "type": "Microsoft.Network/publicIPAddresses",
-            "name": "[concat(parameters('accountName'),'ipwestus')]",
-            "location": "westus",
-            "properties": {
-                "publicIPAllocationMethod": "Dynamic"
+              "target": "[reference(concat(parameters('accountName'),'ipwestus')).ipAddress]",
+              "endpointStatus": "Enabled",
+              "endpointLocation": "westus",
+              "geoMapping": [
+                "GEO-NA",
+                "GEO-SA",
+                "GEO-AP"
+              ]
             }
-        },
-        {
-            "apiVersion": "2015-05-01-preview",
-            "type": "Microsoft.Network/publicIPAddresses",
-            "name": "[concat(parameters('accountName'),'ipwesteurope')]",
-            "location": "westeurope",
+          },
+          {
+            "name": "WestEuropeEndpoint",
+            "type": "Microsoft.Network/TrafficManagerProfiles/ExternalEndpoints",
             "properties": {
-                "publicIPAllocationMethod": "Dynamic"
+              "target": "[reference(concat(parameters('accountName'),'ipwesteurope')).ipAddress]",
+              "endpointStatus": "Enabled",
+              "endpointLocation": "westeurope",
+              "geoMapping": [
+                "GEO-EU",
+                "GEO-AS",
+                "GEO-ME",
+                "GEO-AF"
+              ]
             }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[variables('cognitiveservicesid')]",
+        "[variables('cognitiveservicesid2')]"
+      ]
+    },
+    {
+      "apiVersion": "2020-05-01",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[concat(parameters('accountName'),'ipwestus')]",
+      "location": "westus",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+    {
+      "apiVersion": "2020-05-01",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[concat(parameters('accountName'),'ipwesteurope')]",
+      "location": "westeurope",
+      "sku": {
+        "name": "Standard"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[concat(parameters('accountName'),'vn')]",
+      "location": "westus",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
         },
-        {
-            "apiVersion": "2015-05-01-preview",
-            "type": "Microsoft.Network/virtualNetworks",
-            "name": "[concat(parameters('accountName'),'vn')]",
-            "location": "westus",
+        "subnets": [
+          {
+            "name": "appGatewaySubnet",
             "properties": {
-                "addressSpace": {
-                    "addressPrefixes": [
-                        "10.0.0.0/16"
-                    ]
-                },
-                "subnets": [
-                    {
-                        "name": "appGatewaySubnet",
-                        "properties": {
-                            "addressPrefix": "10.0.0.0/28"
-                        }
-                    }
-                ]
+              "addressPrefix": "10.0.0.0/28"
             }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[concat(parameters('accountName'),'vnwe')]",
+      "location": "westeurope",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.0.0.0/16"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "appGatewaySubnet",
+            "properties": {
+              "addressPrefix": "10.0.0.0/28"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/applicationGateways",
+      "apiVersion": "2020-05-01",
+      "name": "[variables('appgatewaynamewestus')]",
+      "location": "westus",
+      "properties": {
+        "sku": {
+          "name": "Standard_v2",
+          "tier": "Standard_v2"
+        },
+        "gatewayIPConfigurations": [
+          {
+            "name": "appGatewayIpConfig",
+            "properties": {
+              "subnet": {
+                "id":"[concat(resourceId('Microsoft.Network/virtualNetworks', concat(parameters('accountName'),'vn')), '/subnets/appGatewaySubnet')]"
+              }
+            }
+          }
+        ],
+        "sslCertificates": [],
+        "trustedRootCertificates": [],
+        "frontendIPConfigurations": [
+          {
+            "name": "appGwPublicFrontendIp",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id":"[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('accountName'),'ipwestus'))]"
+              }
+            }
+          }
+        ],
+        "frontendPorts": [
+          {
+            "name": "port_80",
+            "properties": {
+              "port": 80
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "westusresource",
+            "properties": {
+              "backendAddresses": [
+                {
+                  "fqdn": "[concat(parameters('accountName'), 'westus.cognitiveservices.azure.com')]"
+                }
+              ]
+            }
+          }
+        ],
+        "backendHttpSettingsCollection": [
+          {
+            "name": "Basic",
+            "properties": {
+              "port": 443,
+              "protocol": "Https",
+              "cookieBasedAffinity": "Disabled",
+              "hostName": "[concat(parameters('accountName'), 'westus.cognitiveservices.azure.com')]",
+              "pickHostNameFromBackendAddress": false,
+              "requestTimeout": 20,
+              "probe": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewestus')), '/probes/HTTPSProbe')]"
+              }
+            }
+          }
+        ],
+        "httpListeners": [
+          {
+            "name": "Basic",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewestus')), '/frontendIPConfigurations/appGwPublicFrontendIp')]"
+              },
+              "frontendPort": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewestus')), '/frontendPorts/port_80')]"
+              },
+              "protocol": "Http",
+              "hostNames": [],
+              "requireServerNameIndication": false
+            }
+          }
+        ],
+        "urlPathMaps": [],
+        "requestRoutingRules": [
+          {
+            "name": "Simple",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewestus')), '/httpListeners/Basic')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewestus')), '/backendAddressPools/westusresource')]"
+              },
+              "backendHttpSettings": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewestus')), '/backendHttpSettingsCollection/Basic')]"
+              }
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "HTTPSProbe",
+            "properties": {
+              "protocol": "Https",
+              "host": "[concat(parameters('accountName'), 'westus.cognitiveservices.azure.com')]",
+              "path": "/status-0123456789abcdef",
+              "interval": 30,
+              "timeout": 30,
+              "unhealthyThreshold": 3,
+              "pickHostNameFromBackendHttpSettings": false,
+              "minServers": 0,
+              "match": {}
+            }
+          }
+        ],
+        "rewriteRuleSets": [],
+        "redirectConfigurations": [],
+        "privateLinkConfigurations": [],
+        "enableHttp2": false,
+        "autoscaleConfiguration": {
+          "minCapacity": 0,
+          "maxCapacity": 10
         }
-    ]
+      },
+      "dependsOn": [
+        "[concat(resourceGroup().id,'/providers/','Microsoft.Network/publicIPAddresses/', parameters('accountName'),'ipwestus')]",
+        "[concat(resourceGroup().id,'/providers/','Microsoft.Network/virtualNetworks/', parameters('accountName'),'vn')]",
+        "[variables('cognitiveservicesid')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Network/applicationGateways",
+      "apiVersion": "2020-05-01",
+      "name": "[variables('appgatewaynamewesteu')]",
+      "location": "westeurope",
+      "properties": {
+        "sku": {
+          "name": "Standard_v2",
+          "tier": "Standard_v2"
+        },
+        "gatewayIPConfigurations": [
+          {
+            "name": "appGatewayIpConfig",
+            "properties": {
+              "subnet": {
+                "id":"[concat(resourceId('Microsoft.Network/virtualNetworks', concat(parameters('accountName'),'vnwe')), '/subnets/appGatewaySubnet')]"
+              }
+            }
+          }
+        ],
+        "sslCertificates": [],
+        "trustedRootCertificates": [],
+        "frontendIPConfigurations": [
+          {
+            "name": "appGwPublicFrontendIp",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id":"[resourceId('Microsoft.Network/publicIPAddresses', concat(parameters('accountName'),'ipwesteurope'))]"
+              }
+            }
+          }
+        ],
+        "frontendPorts": [
+          {
+            "name": "port_80",
+            "properties": {
+              "port": 80
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "westeuresource",
+            "properties": {
+              "backendAddresses": [
+                {
+                  "fqdn": "[concat(parameters('accountName'), 'westeurope.cognitiveservices.azure.com')]"
+                }
+              ]
+            }
+          }
+        ],
+        "backendHttpSettingsCollection": [
+          {
+            "name": "Basic",
+            "properties": {
+              "port": 443,
+              "protocol": "Https",
+              "cookieBasedAffinity": "Disabled",
+              "hostName": "[concat(parameters('accountName'), 'westeurope.cognitiveservices.azure.com')]",
+              "pickHostNameFromBackendAddress": false,
+              "requestTimeout": 20,
+              "probe": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewesteu')), '/probes/HTTPSProbe')]"
+              }
+            }
+          }
+        ],
+        "httpListeners": [
+          {
+            "name": "Basic",
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewesteu')), '/frontendIPConfigurations/appGwPublicFrontendIp')]"
+              },
+              "frontendPort": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewesteu')), '/frontendPorts/port_80')]"
+              },
+              "protocol": "Http",
+              "hostNames": [],
+              "requireServerNameIndication": false
+            }
+          }
+        ],
+        "urlPathMaps": [],
+        "requestRoutingRules": [
+          {
+            "name": "Simple",
+            "properties": {
+              "ruleType": "Basic",
+              "httpListener": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewesteu')), '/httpListeners/Basic')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewesteu')), '/backendAddressPools/westeuresource')]"
+              },
+              "backendHttpSettings": {
+                "id": "[concat(resourceId('Microsoft.Network/applicationGateways', variables('appgatewaynamewesteu')), '/backendHttpSettingsCollection/Basic')]"
+              }
+            }
+          }
+        ],
+        "probes": [
+          {
+            "name": "HTTPSProbe",
+            "properties": {
+              "protocol": "Https",
+              "host": "[concat(parameters('accountName'), 'westeurope.cognitiveservices.azure.com')]",
+              "path": "/status-0123456789abcdef",
+              "interval": 30,
+              "timeout": 30,
+              "unhealthyThreshold": 3,
+              "pickHostNameFromBackendHttpSettings": false,
+              "minServers": 0,
+              "match": {}
+            }
+          }
+        ],
+        "rewriteRuleSets": [],
+        "redirectConfigurations": [],
+        "privateLinkConfigurations": [],
+        "enableHttp2": false,
+        "autoscaleConfiguration": {
+          "minCapacity": 0,
+          "maxCapacity": 10
+        }
+      },
+      "dependsOn": [
+        "[concat(resourceGroup().id,'/providers/','Microsoft.Network/publicIPAddresses/', parameters('accountName'),'ipwesteurope')]",
+        "[concat(resourceGroup().id,'/providers/','Microsoft.Network/virtualNetworks/', parameters('accountName'),'vnwe')]",
+        "[variables('cognitiveservicesid2')]"
+      ]
+    }
+  ]
 }
