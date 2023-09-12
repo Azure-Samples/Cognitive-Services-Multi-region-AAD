@@ -4,7 +4,7 @@ languages:
 - json
 products:
 - azure
-- azure-cognitive-services
+- ai-services
 name: "Multi-regional Cognitive Services endpoint using Traffic Manager and AAD authentication"
 azureDeploy: "https://raw.githubusercontent.com/Azure-Samples/Cognitive-Services-Multi-region-AAD/master/azuredeploy.json"
 description: "Create a single multi-region Cognitive Services endpoint using Traffic Manager and AAD authentication"
